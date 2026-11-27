@@ -10,12 +10,14 @@ import { CapabilitiesService } from './capabilities/capabilities.service';
 import { CapabilitiesController } from './capabilities/capabilities.controller';
 import { FormsService } from './forms/forms.service';
 import { FormsController } from './forms/forms.controller';
+import { InspectionSyncService } from './inspections/sync.service';
+import { InspectionsController } from './inspections/inspections.controller';
 
 @Module({
   imports: [ConfigModule, ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 100 }])],
-  controllers: [HealthController, CapabilitiesController, FormsController],
+  controllers: [HealthController, CapabilitiesController, FormsController, InspectionsController],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
-    IdentityService, SupabaseAuthGuard, PostgrestService, CapabilitiesService, FormsService],
+    IdentityService, SupabaseAuthGuard, PostgrestService, CapabilitiesService, FormsService, InspectionSyncService],
 })
 export class AppModule {}
