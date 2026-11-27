@@ -60,3 +60,6 @@ Same clientOpId/inspectionId with a payload is compared by SHA-256 of the CANONI
 ## Schedules and occurrences (M07) - DB pieces pending (DE 064): v_schedules, v_occurrences, schedule_create, schedule_cancel, schedule_reassign
 - POST /v1/schedules (published template only, pinned to the version at creation; timezone = IANA zone, due date computed in it), GET /v1/schedules, POST /v1/schedules/:id/cancel {reason}, POST /v1/schedules/:id/reassign {assigneeMembershipId, reason}, GET /v1/occurrences?tenantId&status.
 - Occurrence uniqueness key schedule_id + occurrence_date (DB), so scheduler retries create no duplicates. Overdue is derived in the DB. Retired template: 422 template_retired for new schedules; existing occurrences stay pinned. Scheduler trigger (Vercel cron vs pg_cron) is undecided (Mohamed).
+
+## Return routing (Mohamed 27729263, hybrid)
+A returned submission resumes at the returning stage only if every changed answer is one of the flagged questions; if any unflagged answer changed it restarts at stage 1. Return reason is always mandatory; flags optional. Each resubmission is a new history event that records which answers changed. The DB (M04, DE) enforces and stores this; src/policy/policy.ts holds the reference function and tests the API vectors.

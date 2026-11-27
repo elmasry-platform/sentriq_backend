@@ -10,7 +10,13 @@ export const EVIDENCE_POLICY = {
   allowVideo: false,
   downloadRequiresScanStatus: 'clean',
 } as const;
-/** Flagged default: a returned inspection resumes at the stage that returned it. */
-export const RETURN_ROUTING: 'resume_at_returning_stage' | 'restart' = 'resume_at_returning_stage';
+/** Mohamed (27729263): hybrid. Resume at the returning stage only if every changed answer was flagged; otherwise restart at stage 1. */
+export const RETURN_ROUTING = 'hybrid_flagged_only_resumes' as const;
+export function routeAfterResubmission(returningStage: number, flaggedQuestionIds: string[], changedQuestionIds: string[]): { restart: boolean; stage: number } {
+  const flagged = new Set(flaggedQuestionIds);
+  const allFlagged = changedQuestionIds.every((q) => flagged.has(q));
+  // No change at all: nothing contradicts the flagged-only rule, resume at the returning stage.
+  return allFlagged ? { restart: false, stage: returningStage } : { restart: true, stage: 1 };
+}
 /** Flagged default: answers to hidden conditional questions are kept on device, excluded from submission, validation, scoring. */
 export const HIDDEN_ANSWER_RULE: 'exclude_from_submission' | 'clear' | 'retain' = 'exclude_from_submission';
