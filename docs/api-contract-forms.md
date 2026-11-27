@@ -91,3 +91,7 @@ Do NOT deploy this backend to any environment until every object in `src/db-cont
 ## Scripts (QA / Reviewer)
 - `scripts/check-db-contract.sql`: read-only, run as DB admin; lists which manifest objects exist. `scripts/check-db-contract.mjs`: same through the PostgREST OpenAPI, needs a signed-in user token in SUPABASE_USER_JWT (anon cannot read it).
 - `scripts/isolation-check.mjs`: criterion 5 cross-company checks with each user's own session (env in the file header). All mutations are expected to be refused, so a pass changes no data.
+
+## Operations note: stuck transactions
+
+Recommendation (not applied, needs approval): set `idle_in_transaction_session_timeout` (for example 30 s) on the API role so an abandoned client transaction cannot hold the `for update` row lock on a form and queue later calls. DE's lock_timeout (3 s) in the RPCs makes waiting calls fail fast instead of hanging.
