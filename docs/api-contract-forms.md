@@ -84,3 +84,6 @@ A returned submission resumes at the returning stage only if every changed answe
 - review: `reason` optional on approve, required (min 5) on return; `flaggedQuestionIds` (max 300) only with return (422 flags_only_valid_on_return otherwise), passed to the DB as p_flagged_question_ids.
 - The DB computes return routing and changed answers; src/policy/policy.ts is the executable spec used for test vectors and for a parity test against the DB function.
 - Schedules: one-off ("once") frequency is deliberately out (brief: daily, weekly, monthly, yearly). A one-off inspection is a normal assignment, not a schedule.
+
+## DEPLOY ORDER (hard rule)
+Do NOT deploy this backend to any environment until every object in `src/db-contract.ts` marked `pending` exists on that environment's database (M03 inspection_sync = 061, M04 review/resubmit/reopen incl. `p_flagged_question_ids` = 062, M05 evidence = 063, M07 schedules = 065). Applied on TEST today: 057, 058, 059. A contract test fails if the code calls a DB object missing from the manifest. No live backend deploy is approved.
