@@ -13,6 +13,7 @@ export const EVIDENCE_POLICY = {
 /** Mohamed (27729263, confirmed 27764778): hybrid. Resume at the returning stage only if every changed answer was flagged; otherwise restart at stage 1. */
 export const RETURN_ROUTING = 'hybrid_flagged_only_resumes' as const;
 export const UNCHANGED_REPLY_MIN_CHARS = 10;
+/** SPEC ONLY. The database computes the route (inspection_review_decide / inspection_resubmit) from stored answers; the backend never decides it. A parity test against the DB function is added once DE publishes it. */
 export type Answers = Record<string, unknown>;
 
 function canon(v: unknown): string {

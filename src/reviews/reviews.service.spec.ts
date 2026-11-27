@@ -8,8 +8,19 @@ const err = (m: string, code = '22023', status = 400) => jest.fn().mockRejectedV
 describe('ReviewsService', () => {
   it('forwards token, revision and decision', async () => {
     const rpc = jest.fn().mockResolvedValue({});
-    await mk(rpc).decide('tokA', U, { expectedRevision: 2, decision: 'return', reason: 'fix photos' });
-    expect(rpc).toHaveBeenCalledWith('inspection_review_decide', { p_id: U, p_expected_revision: 2, p_decision: 'return', p_reason: 'fix photos' }, 'tokA');
+    await mk(rpc).decide('tokA', U, { expectedRevision: 2, decision: 'return', reason: 'fix photos', flaggedQuestionIds: ['q1', 'q1'] });
+    expect(rpc).toHaveBeenCalledWith('inspection_review_decide', { p_id: U, p_expected_revision: 2, p_decision: 'return', p_reason: 'fix photos', p_flagged_question_ids: ['q1'] }, 'tokA');
+  });
+  it('approve without a reason sends null reason and no flags', async () => {
+    const rpc = jest.fn().mockResolvedValue({});
+    await mk(rpc).decide('t', U, { expectedRevision: 1, decision: 'approve' });
+    expect(rpc).toHaveBeenCalledWith('inspection_review_decide', { p_id: U, p_expected_revision: 1, p_decision: 'approve', p_reason: null, p_flagged_question_ids: null }, 't');
+  });
+  it('flags are refused on approve (422) and empty flag list on return is allowed', async () => {
+    await expect(mk(jest.fn()).decide('t', U, { expectedRevision: 1, decision: 'approve', flaggedQuestionIds: ['q1'] })).rejects.toBeInstanceOf(UnprocessableEntityException);
+    const rpc = jest.fn().mockResolvedValue({});
+    await mk(rpc).decide('t', U, { expectedRevision: 1, decision: 'return', reason: 'please redo', flaggedQuestionIds: [] });
+    expect(rpc.mock.calls[0][1].p_flagged_question_ids).toEqual([]);
   });
   it('self review is 403, stale revision 409, hidden inspection 404', async () => {
     const d = { expectedRevision: 1, decision: 'approve' as const, reason: 'all good' };

@@ -79,3 +79,8 @@ A returned submission resumes at the returning stage only if every changed answe
 - POST /v1/inspections/:id/resubmit {expectedRevision, reply}: routing per hybrid rule from STORED answers; 422 reply_required_when_unchanged.
 - POST /v1/inspections/:id/reopen {expectedRevision, reason}: separate privilege, only from approved, new revision, 403 reopen_not_permitted, 409 inspection_not_approved.
 - Evidence intent also accepts originalSha256 and originalBytes (original before compression). Schedules: frequency daily|weekly|monthly|yearly, interval 1..52; reason_too_short = 422.
+
+### Round-3 notes
+- review: `reason` optional on approve, required (min 5) on return; `flaggedQuestionIds` (max 300) only with return (422 flags_only_valid_on_return otherwise), passed to the DB as p_flagged_question_ids.
+- The DB computes return routing and changed answers; src/policy/policy.ts is the executable spec used for test vectors and for a parity test against the DB function.
+- Schedules: one-off ("once") frequency is deliberately out (brief: daily, weekly, monthly, yearly). A one-off inspection is a normal assignment, not a schedule.

@@ -25,7 +25,13 @@ export class ReviewsService {
   private async run<T>(p: Promise<T>): Promise<T> { try { return await p; } catch (e) { throw this.fail(e); } }
 
   decide(token: string, id: string, d: ReviewDecisionDto) {
-    return this.run(this.pg.rpc('inspection_review_decide', { p_id: id, p_expected_revision: d.expectedRevision, p_decision: d.decision, p_reason: d.reason }, token));
+    if (d.decision !== 'return' && d.flaggedQuestionIds?.length) {
+      throw new UnprocessableEntityException({ code: 'flags_only_valid_on_return' });
+    }
+    return this.run(this.pg.rpc('inspection_review_decide', {
+      p_id: id, p_expected_revision: d.expectedRevision, p_decision: d.decision, p_reason: d.reason ?? null,
+      p_flagged_question_ids: d.decision === 'return' ? [...new Set(d.flaggedQuestionIds ?? [])] : null,
+    }, token));
   }
   resubmit(token: string, id: string, d: ResubmitDto) {
     return this.run(this.pg.rpc('inspection_resubmit', { p_id: id, p_expected_revision: d.expectedRevision, p_reply: d.reply }, token));
