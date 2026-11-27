@@ -24,7 +24,7 @@ export class ReviewsService {
   }
   private async run<T>(p: Promise<T>): Promise<T> { try { return await p; } catch (e) { throw this.fail(e); } }
 
-  decide(token: string, id: string, d: ReviewDecisionDto) {
+  async decide(token: string, id: string, d: ReviewDecisionDto) {
     if (d.decision !== 'return' && d.flaggedQuestionIds?.length) {
       throw new UnprocessableEntityException({ code: 'flags_only_valid_on_return' });
     }
