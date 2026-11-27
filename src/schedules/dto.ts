@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 export class CreateScheduleDto {
   @IsUUID() tenantId!: string;
@@ -17,8 +17,8 @@ export class CreateScheduleDto {
 }
 export class ReassignDto {
   @IsUUID() assigneeMembershipId!: string;
-  @IsString() @MaxLength(2000) reason!: string;
+  @IsString() @MinLength(5) @MaxLength(2000) reason!: string;
 }
 export class CancelDto {
-  @IsString() @MaxLength(2000) reason!: string;
+  @IsString() @MinLength(5) @MaxLength(2000) reason!: string;
 }

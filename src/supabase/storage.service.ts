@@ -7,7 +7,7 @@ export class StorageService {
   constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {}
 
   async signedDownloadUrl(bucket: string, path: string, expiresIn: number, token: string): Promise<string> {
-    const res = await fetch(`${this.config.supabaseUrl}/storage/v1/object/sign/${bucket}/${path}`, {
+    const res = await fetch(`${this.config.supabaseUrl}/storage/v1/object/sign/${encodeURIComponent(bucket)}/${path.split('/').map(encodeURIComponent).join('/')}`, {
       method: 'POST',
       headers: { apikey: this.config.supabaseAnonKey, authorization: `Bearer ${token}`, 'content-type': 'application/json' },
       body: JSON.stringify({ expiresIn }),
