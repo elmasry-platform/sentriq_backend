@@ -50,3 +50,48 @@ Response 200 `{results:[{clientOpId, status: applied|duplicate|rejected, reason?
 
 ### Payload comparison (Reviewer rule)
 Same clientOpId/inspectionId with a payload is compared by SHA-256 of the CANONICAL JSON of the answers (sorted keys, no whitespace, UTF-8), computed in the database (digest(...,'sha256')), never a weak or client-supplied hash. Mismatch = rejected `payload_mismatch` (client equivalent: CLIENT_ID_PAYLOAD_MISMATCH), the stored record is untouched.
+
+## Evidence (M05) - DB pieces pending (DE 062): evidence_create_intent, evidence_confirm, evidence_get_download
+- POST /v1/evidence/intents: per-file checks in API (image 10 MB, pdf 25 MB, no video, jpeg/png/webp/pdf only) then DB (aggregate 100 MB, authz, client-id idempotency). Same clientEvidenceId + same sha256 = same row; different sha256 = 409 payload_mismatch.
+- POST /v1/evidence/:id/confirm {sha256}: marks uploaded; scan_status starts pending/quarantined.
+- GET /v1/evidence/:id/download: 423 evidence_not_available until scan_status=clean; then a 10-minute signed link signed with the user's own token (storage RLS applies). Invisible row: 404; forbidden: 403.
+- Undecided: max files per submission, scanner vendor.
+
+## Schedules and occurrences (M07) - DB pieces pending (DE 064): v_schedules, v_occurrences, schedule_create, schedule_cancel, schedule_reassign
+- POST /v1/schedules (published template only, pinned to the version at creation; timezone = IANA zone, due date computed in it), GET /v1/schedules, POST /v1/schedules/:id/cancel {reason}, POST /v1/schedules/:id/reassign {assigneeMembershipId, reason}, GET /v1/occurrences?tenantId&status.
+- Occurrence uniqueness key schedule_id + occurrence_date (DB), so scheduler retries create no duplicates. Overdue is derived in the DB. Retired template: 422 template_retired for new schedules; existing occurrences stay pinned. Scheduler trigger (Vercel cron vs pg_cron) is undecided (Mohamed).
+
+## Return routing (Mohamed 27729263, hybrid)
+A returned submission resumes at the returning stage only if every changed answer is one of the flagged questions; if any unflagged answer changed it restarts at stage 1. Return reason is always mandatory; flags optional. Each resubmission is a new history event that records which answers changed. The DB (M04, DE) enforces and stores this; src/policy/policy.ts holds the reference function and tests the API vectors.
+
+## Mohamed's decisions that touch the API (27761103, 27764778)
+- Return: reason mandatory. Changed answers are computed SERVER-SIDE from stored answers, never from the client body. Resume at returning stage only if all changed answers are flagged, else stage 1. Unchanged resubmission: resumes at returning stage, written reply of at least 10 characters required (422 reply_required_when_unchanged), history flag `resubmitted_without_change`. History stores the changed question ids per resubmission.
+- Hidden answers: dropped from submission, validation and scoring, kept on the device. Submit audit records which questions were dropped and the rule that hid them. If a hidden question has a finding, hiding needs explicit confirmation (request field `confirmHiddenFindings`) and the finding is kept, never deleted silently. DB/RPC (DE M03).
+- Template approval: creator, last editor and submitter cannot approve (DB, done in 058 fixup 2); not applied to inspections. Approve permission: superadmin by default, delegable to a functional role by the superadmin only. Preview before approval is optional; opening it is written to audit and never blocks approve.
+- Reopen (inspections.reopen, separate key): only from approved, reason mandatory, creates a NEW revision, keeps the original approval in history, notifies earlier approvers. Optional hard lock after N days. Planned: POST /v1/inspections/:id/reopen {reason}. DB: DE M04.
+- Schedules stay pinned to their version. Mandatory-upgrade option for critical changes: only for schedules not yet started, with notification, never changes a delivered inspection. Planned: POST /v1/schedules/:id/upgrade {toVersion, reason}.
+- Evidence: 10/25/100 MB, no video, 10-minute links, executable files blocked, virus scan, client-side compression keeping a hash of the original, resumable chunked upload. Allowed types pending Mohamed: policy says jpeg/png/webp/pdf, brief says JPEG/PNG/HEIC/PDF. MIME sniffing and the 100 MB aggregate are enforced by the DB/scanner, not by this API (the API only checks the declared type and per-file size).
+- Stage chain 0-3 frozen at publish; a finding with severity critical forces at least one review stage whatever the template says (DB).
+- Single approver mode: enabled by the platform operator only, active only while fewer than 2 eligible members, every self-approval stamped self-approved. External guest approver option. DB/operator, later.
+
+## Review, resubmit, reopen (M04) - DB pending (DE): api.inspection_review_decide(p_id, p_expected_revision, p_decision, p_reason), api.inspection_resubmit(p_id, p_expected_revision, p_reply), api.inspection_reopen(p_id, p_expected_revision, p_reason) (name proposed)
+- POST /v1/inspections/:id/review {expectedRevision, decision: approve|return, reason}: 403 reviewer_must_differ_from_submitter / review_stage_not_allowed, 409 review_stage_out_of_order / inspection_not_in_review / stale revision, 422 return_reason_required.
+- POST /v1/inspections/:id/resubmit {expectedRevision, reply}: routing per hybrid rule from STORED answers; 422 reply_required_when_unchanged.
+- POST /v1/inspections/:id/reopen {expectedRevision, reason}: separate privilege, only from approved, new revision, 403 reopen_not_permitted, 409 inspection_not_approved.
+- Evidence intent also accepts originalSha256 and originalBytes (original before compression). Schedules: frequency daily|weekly|monthly|yearly, interval 1..52; reason_too_short = 422.
+
+### Round-3 notes
+- review: `reason` optional on approve, required (min 5) on return; `flaggedQuestionIds` (max 300) only with return (422 flags_only_valid_on_return otherwise), passed to the DB as p_flagged_question_ids.
+- The DB computes return routing and changed answers; src/policy/policy.ts is the executable spec used for test vectors and for a parity test against the DB function.
+- Schedules: one-off ("once") frequency is deliberately out (brief: daily, weekly, monthly, yearly). A one-off inspection is a normal assignment, not a schedule.
+
+## DEPLOY ORDER (hard rule)
+Do NOT deploy this backend to any environment until every object in `src/db-contract.ts` marked `pending` exists on that environment's database (M03 inspection_sync = 061, M04 review/resubmit/reopen incl. `p_flagged_question_ids` = 062, M05 evidence = 063, M07 schedules = 065). Applied on TEST today: 057, 058, 059. A contract test fails if the code calls a DB object missing from the manifest. No live backend deploy is approved.
+
+## Scripts (QA / Reviewer)
+- `scripts/check-db-contract.sql`: read-only, run as DB admin; lists which manifest objects exist. `scripts/check-db-contract.mjs`: same through the PostgREST OpenAPI, needs a signed-in user token in SUPABASE_USER_JWT (anon cannot read it).
+- `scripts/isolation-check.mjs`: criterion 5 cross-company checks with each user's own session (env in the file header). All mutations are expected to be refused, so a pass changes no data.
+
+## Operations note: stuck transactions
+
+Recommendation (not applied, needs approval): set `idle_in_transaction_session_timeout` (for example 30 s) on the API role so an abandoned client transaction cannot hold the `for update` row lock on a form and queue later calls. DE's lock_timeout (3 s) in the RPCs makes waiting calls fail fast instead of hanging.
