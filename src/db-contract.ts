@@ -1,5 +1,6 @@
 /** DB objects this backend calls, with the migration that must be applied on the target DB BEFORE the backend is deployed. */
 export const DB_CONTRACT: Record<string, { kind: 'rpc' | 'view'; migration: string; status: 'on_test' | 'pending' }> = {
+  v_memberships: { kind: 'view', migration: 'earlier', status: 'on_test' },
   list_my_entitlements: { kind: 'rpc', migration: 'earlier', status: 'on_test' },
   authorize: { kind: 'rpc', migration: 'earlier', status: 'on_test' },
   form_validate: { kind: 'rpc', migration: '058', status: 'on_test' },
