@@ -3,10 +3,12 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { enablePortalCors } from './cors';
+import { applyHardening } from './hardening';
 import { APP_CONFIG, AppConfig } from './config/env';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  applyHardening(app);
   enablePortalCors(app);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   app.enableShutdownHooks();

@@ -7,6 +7,7 @@ import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import { AppModule } from '../src/app.module';
 import { enablePortalCors } from '../src/cors';
+import { applyHardening } from '../src/hardening';
 
 const server = express();
 let ready: Promise<unknown> | null = null;
@@ -20,6 +21,7 @@ function bootstrap(): Promise<unknown> {
       app.useGlobalPipes(
         new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
       );
+      applyHardening(app);
       enablePortalCors(app);
       await app.init();
     })();

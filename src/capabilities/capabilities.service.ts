@@ -1,4 +1,4 @@
-import { BadGatewayException, Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { AuthUser } from '../identity/identity.service';
 import { PostgrestError, PostgrestService } from '../supabase/postgrest.service';
 
@@ -42,6 +42,7 @@ export interface CapabilitiesProfile {
  */
 @Injectable()
 export class CapabilitiesService {
+  private readonly logger = new Logger(CapabilitiesService.name);
   constructor(private readonly postgrest: PostgrestService) {}
 
   async getCapabilities(user: AuthUser, accessToken: string, tenantId: string): Promise<CapabilitiesProfile> {
@@ -130,7 +131,8 @@ export class CapabilitiesService {
     if (error instanceof PostgrestError) {
       // The database (RLS, RPC guards) is the authorization boundary; surface
       // its decision without leaking internals.
-      return new BadGatewayException(`database_error:${error.code ?? error.status}`);
+      this.logger.warn(`database_error code=${error.code ?? error.status}`);
+      return new BadGatewayException('database_error');
     }
     return error instanceof Error ? error : new Error('unknown_error');
   }
