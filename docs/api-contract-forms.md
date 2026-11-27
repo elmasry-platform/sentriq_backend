@@ -47,3 +47,6 @@ Response 200 `{results:[{clientOpId, status: applied|duplicate|rejected, reason?
 - Hidden conditional answers (default, flagged): kept on device, excluded from submission, validation and scoring.
 - Queued ops are not "Submitted" until the response confirms `applied` or `duplicate`.
 - DB side (api.inspection_sync, hse.sync_operations) is a Data Engineer deliverable; backend is pass-through.
+
+### Payload comparison (Reviewer rule)
+Same clientOpId/inspectionId with a payload is compared by SHA-256 of the CANONICAL JSON of the answers (sorted keys, no whitespace, UTF-8), computed in the database (digest(...,'sha256')), never a weak or client-supplied hash. Mismatch = rejected `payload_mismatch` (client equivalent: CLIENT_ID_PAYLOAD_MISMATCH), the stored record is untouched.
