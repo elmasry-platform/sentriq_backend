@@ -74,7 +74,7 @@ describe('CapabilitiesService', () => {
       BadGatewayException,
     );
     await expect(service(select, jest.fn()).getCapabilities(user, 'tok', 't-1')).rejects.toThrow(
-      'database_error:PGRST106',
+      'database_error',
     );
   });
 

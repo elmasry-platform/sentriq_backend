@@ -2,6 +2,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { applyHardening } from '../src/hardening';
 
 const USER = { id: '11111111-1111-4111-8111-111111111111', email: 'u@example.com' };
 const TENANT = '22222222-2222-4222-8222-222222222222';
@@ -22,6 +23,7 @@ describe('App (e2e, mocked Supabase)', () => {
     process.env.SUPABASE_ANON_KEY = 'anon';
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication();
+    applyHardening(app);
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
     await app.init();
   });
@@ -87,7 +89,8 @@ describe('App (e2e, mocked Supabase)', () => {
       .get(`/v1/me/capabilities?tenantId=${TENANT}`)
       .set('Authorization', 'Bearer tok');
     expect(res.status).toBe(502);
-    expect(res.body.message).toBe('database_error:PGRST106');
+    expect(res.body.message).toBe('database_error');
+    expect(JSON.stringify(res.body)).not.toContain('PGRST');
   });
 
   it('POST /v1/authorize validates the body', async () => {
@@ -111,5 +114,37 @@ describe('App (e2e, mocked Supabase)', () => {
       .send({ tenantId: TENANT, permissionKey: 'hse.inspections', action: 'read' });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ allowed: true });
+  });
+
+  it('does not send x-powered-by and sends helmet headers', async () => {
+    const res = await request(app.getHttpServer()).get('/health');
+    expect(res.headers['x-powered-by']).toBeUndefined();
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['strict-transport-security']).toBeDefined();
+  });
+});
+
+describe('App rate limit (e2e)', () => {
+  let app: INestApplication;
+  beforeAll(async () => {
+    process.env.SUPABASE_URL = 'https://ref.supabase.co';
+    process.env.SUPABASE_ANON_KEY = 'anon';
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    app = moduleRef.createNestApplication();
+    applyHardening(app);
+    await app.init();
+  });
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('answers 429 on the 101st request in a minute from one address', async () => {
+    const server = app.getHttpServer();
+    for (let i = 0; i < 100; i++) {
+      const ok = await request(server).get('/health');
+      expect(ok.status).toBe(200);
+    }
+    const limited = await request(server).get('/health');
+    expect(limited.status).toBe(429);
   });
 });
