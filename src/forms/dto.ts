@@ -21,15 +21,18 @@ export class ApproveFormDto {
   @Type(() => Number) @IsInt() @Min(1) expectedRevision!: number;
 }
 export class ReturnFormDto {
+  @Type(() => Number) @IsInt() @Min(1) expectedRevision!: number;
   @IsString() @MaxLength(2000) reason!: string;
 }
 export class StatusFormDto {
+  @Type(() => Number) @IsInt() @Min(1) expectedRevision!: number;
   @IsIn(['retired', 'archived', 'draft']) status!: 'retired' | 'archived' | 'draft';
 }
 export class CloneFormDto {
   @IsOptional() @IsObject() title?: Record<string, string>;
 }
 export class ValidateFormDto {
+  @IsUUID() tenantId!: string;
   @IsObject() title!: Record<string, string>;
   @IsOptional() @IsArray() @IsString({ each: true }) languages?: string[];
   @IsObject() definition!: Record<string, unknown>;

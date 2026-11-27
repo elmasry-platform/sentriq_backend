@@ -23,7 +23,7 @@ export class FormsService {
     return rows[0];
   }
   validate(token: string, d: ValidateFormDto) {
-    return this.run(this.pg.rpc('form_validate', { p_title: d.title, p_languages: d.languages ?? DEFAULT_LANGS, p_definition: d.definition }, token));
+    return this.run(this.pg.rpc('form_validate', { p_tenant_id: d.tenantId, p_title: d.title, p_languages: d.languages ?? DEFAULT_LANGS, p_definition: d.definition }, token));
   }
   create(token: string, d: CreateFormDto) {
     return this.run(this.pg.rpc<string>('form_create_draft', { p_tenant_id: d.tenantId, p_title: d.title, p_category: d.category, p_definition: d.definition, p_languages: d.languages ?? DEFAULT_LANGS }, token));
@@ -35,16 +35,22 @@ export class FormsService {
     return this.run(this.pg.rpc('form_submit_for_approval', { p_id: id, p_expected_revision: d.expectedRevision, p_change_note: d.changeNote }, token));
   }
   returnToDraft(token: string, id: string, d: ReturnFormDto) {
-    return this.run(this.pg.rpc('form_return_to_draft', { p_id: id, p_reason: d.reason }, token));
+    return this.run(this.pg.rpc('form_return_to_draft', { p_id: id, p_expected_revision: d.expectedRevision, p_reason: d.reason }, token));
   }
   approve(token: string, id: string, d: ApproveFormDto) {
     return this.run(this.pg.rpc<number>('form_approve_publish', { p_id: id, p_expected_revision: d.expectedRevision }, token));
   }
   setStatus(token: string, id: string, d: StatusFormDto) {
-    return this.run(this.pg.rpc('form_set_status', { p_id: id, p_status: d.status }, token));
+    return this.run(this.pg.rpc('form_set_status', { p_id: id, p_expected_revision: d.expectedRevision, p_status: d.status }, token));
   }
   clone(token: string, id: string, d: CloneFormDto) {
     return this.run(this.pg.rpc<string>('form_clone', { p_id: id, p_title: d.title ?? null }, token));
+  }
+  versions(token: string, id: string) {
+    return this.run(this.pg.select('v_form_versions', { select: '*', templateId: `eq.${id}`, order: 'version.desc' }, token));
+  }
+  version(token: string, id: string, version: number) {
+    return this.run(this.pg.rpc('form_version_get', { p_template_id: id, p_version: version }, token));
   }
   compare(token: string, id: string, from: number, to: number) {
     return this.run(this.pg.rpc('form_compare_versions', { p_id: id, p_from: from, p_to: to }, token));

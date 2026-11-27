@@ -20,5 +20,7 @@ export class FormsController {
   @Post(':id/approve') @HttpCode(200) async approve(@Req() r: AuthenticatedRequest, @Param('id', ParseUUIDPipe) id: string, @Body() d: ApproveFormDto) { return { version: await this.forms.approve(tok(r), id, d) }; }
   @Post(':id/status') @HttpCode(204) async status(@Req() r: AuthenticatedRequest, @Param('id', ParseUUIDPipe) id: string, @Body() d: StatusFormDto) { await this.forms.setStatus(tok(r), id, d); }
   @Post(':id/clone') async clone(@Req() r: AuthenticatedRequest, @Param('id', ParseUUIDPipe) id: string, @Body() d: CloneFormDto) { return { id: await this.forms.clone(tok(r), id, d) }; }
+  @Get(':id/versions') versions(@Req() r: AuthenticatedRequest, @Param('id', ParseUUIDPipe) id: string) { return this.forms.versions(tok(r), id); }
+  @Get(':id/versions/:version') version(@Req() r: AuthenticatedRequest, @Param('id', ParseUUIDPipe) id: string, @Param('version', ParseIntPipe) v: number) { return this.forms.version(tok(r), id, v); }
   @Get(':id/compare') compare(@Req() r: AuthenticatedRequest, @Param('id', ParseUUIDPipe) id: string, @Query('from', ParseIntPipe) from: number, @Query('to', ParseIntPipe) to: number) { return this.forms.compare(tok(r), id, from, to); }
 }

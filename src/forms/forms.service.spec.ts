@@ -26,10 +26,25 @@ describe('FormsService', () => {
   });
   it('maps RLS denial to 403 and unknown form to 404', async () => {
     await expect(mk(fail('permission denied', '42501', 403)).clone('t', 'i', {})).rejects.toBeInstanceOf(ForbiddenException);
-    await expect(mk(fail('form_not_found', '22023')).returnToDraft('t', 'i', { reason: 'r' })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(mk(fail('form_not_found', '22023')).returnToDraft('t', 'i', { expectedRevision: 1, reason: 'r' })).rejects.toBeInstanceOf(NotFoundException);
   });
   it('get returns 404 when RLS hides the row (cross-company)', async () => {
     await expect(mk(jest.fn(), jest.fn().mockResolvedValue([])).get('tokB', 'idOfCompanyA')).rejects.toBeInstanceOf(NotFoundException);
+  });
+  it('maps by message, not by code: 22023 not_found vs validation', async () => {
+    await expect(mk(fail('form_not_found', '22023')).approve('t', 'i', { expectedRevision: 1 })).rejects.toBeInstanceOf(NotFoundException);
+    await expect(mk(fail('form_validation_failed', '22023')).approve('t', 'i', { expectedRevision: 1 })).rejects.toBeInstanceOf(UnprocessableEntityException);
+  });
+  it('maps new publish and size errors to 422 and form_not_permitted to 403', async () => {
+    for (const m of ['question_type_not_supported', 'definition_too_large', 'too_many_questions']) {
+      await expect(mk(fail(m, '22023')).approve('t', 'i', { expectedRevision: 1 })).rejects.toBeInstanceOf(UnprocessableEntityException);
+    }
+    await expect(mk(fail('form_not_permitted', '42501')).approve('t', 'i', { expectedRevision: 1 })).rejects.toBeInstanceOf(ForbiddenException);
+  });
+  it('reads versions from v_form_versions with the caller token', async () => {
+    const select = jest.fn().mockResolvedValue([]);
+    await mk(jest.fn(), select).versions('tokA', 'id1');
+    expect(select).toHaveBeenCalledWith('v_form_versions', expect.objectContaining({ templateId: 'eq.id1' }), 'tokA');
   });
   it('hides database internals on unknown errors', async () => {
     const e = await mk(fail('boom secret detail', 'XX000', 500)).clone('t', 'i', {}).catch((x) => x);

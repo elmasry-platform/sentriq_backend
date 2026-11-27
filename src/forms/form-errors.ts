@@ -14,10 +14,13 @@ export function mapFormError(error: unknown): Error {
   if (['form_status_transition_not_allowed', 'form_content_change_requires_draft', 'form_insert_must_be_draft', 'form_not_in_approval'].includes(m)) {
     return new ConflictException(body(m));
   }
-  if (m === 'form_approver_must_differ_from_author' || m === 'form_publish_requires_approval') {
+  if (m === 'form_approver_must_differ_from_author' || m === 'form_publish_requires_approval' || m === 'form_not_permitted') {
     return new ForbiddenException(body(m));
   }
   if (m === 'form_validation_failed') return new UnprocessableEntityException(body(m));
+  if (['question_type_not_supported', 'definition_too_large', 'too_many_questions'].includes(m)) {
+    return new UnprocessableEntityException(body(m));
+  }
   if (m === 'form_change_note_required' || m === 'form_return_reason_required') {
     return new UnprocessableEntityException(body(m));
   }
