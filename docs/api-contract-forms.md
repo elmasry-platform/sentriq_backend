@@ -87,3 +87,7 @@ A returned submission resumes at the returning stage only if every changed answe
 
 ## DEPLOY ORDER (hard rule)
 Do NOT deploy this backend to any environment until every object in `src/db-contract.ts` marked `pending` exists on that environment's database (M03 inspection_sync = 061, M04 review/resubmit/reopen incl. `p_flagged_question_ids` = 062, M05 evidence = 063, M07 schedules = 065). Applied on TEST today: 057, 058, 059. A contract test fails if the code calls a DB object missing from the manifest. No live backend deploy is approved.
+
+## Scripts (QA / Reviewer)
+- `scripts/check-db-contract.sql`: read-only, run as DB admin; lists which manifest objects exist. `scripts/check-db-contract.mjs`: same through the PostgREST OpenAPI, needs a signed-in user token in SUPABASE_USER_JWT (anon cannot read it).
+- `scripts/isolation-check.mjs`: criterion 5 cross-company checks with each user's own session (env in the file header). All mutations are expected to be refused, so a pass changes no data.
