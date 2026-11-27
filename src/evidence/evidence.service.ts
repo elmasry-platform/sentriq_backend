@@ -29,6 +29,7 @@ export class EvidenceService {
       return await this.pg.rpc('evidence_create_intent', {
         p_tenant_id: d.tenantId, p_client_id: d.clientEvidenceId, p_inspection_id: d.inspectionId, p_question_id: d.questionId,
         p_file_name: d.fileName, p_mime_type: d.mimeType, p_bytes: d.bytes, p_sha256: d.sha256,
+        p_original_sha256: d.originalSha256 ?? null, p_original_bytes: d.originalBytes ?? null,
       }, token);
     } catch (e) { throw this.fail(e); }
   }

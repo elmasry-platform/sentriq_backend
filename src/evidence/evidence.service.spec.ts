@@ -21,6 +21,11 @@ describe('EvidenceService', () => {
     await mk(rpc).createIntent('tokA', dto);
     expect(rpc).toHaveBeenCalledWith('evidence_create_intent', expect.objectContaining({ p_client_id: U, p_sha256: dto.sha256 }), 'tokA');
   });
+  it('passes the original hash and size of a compressed image', async () => {
+    const rpc = jest.fn().mockResolvedValue({ id: 'e1' });
+    await mk(rpc).createIntent('t', { ...dto, originalSha256: 'b'.repeat(64), originalBytes: 5000 });
+    expect(rpc).toHaveBeenCalledWith('evidence_create_intent', expect.objectContaining({ p_original_sha256: 'b'.repeat(64), p_original_bytes: 5000 }), 't');
+  });
   it('same client id with different content = 409 payload_mismatch', async () => {
     await expect(mk(err('evidence_payload_mismatch')).createIntent('t', dto)).rejects.toBeInstanceOf(ConflictException);
   });

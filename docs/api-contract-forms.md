@@ -73,3 +73,9 @@ A returned submission resumes at the returning stage only if every changed answe
 - Evidence: 10/25/100 MB, no video, 10-minute links, executable files blocked, virus scan, client-side compression keeping a hash of the original, resumable chunked upload. Allowed types pending Mohamed: policy says jpeg/png/webp/pdf, brief says JPEG/PNG/HEIC/PDF. MIME sniffing and the 100 MB aggregate are enforced by the DB/scanner, not by this API (the API only checks the declared type and per-file size).
 - Stage chain 0-3 frozen at publish; a finding with severity critical forces at least one review stage whatever the template says (DB).
 - Single approver mode: enabled by the platform operator only, active only while fewer than 2 eligible members, every self-approval stamped self-approved. External guest approver option. DB/operator, later.
+
+## Review, resubmit, reopen (M04) - DB pending (DE): api.inspection_review_decide(p_id, p_expected_revision, p_decision, p_reason), api.inspection_resubmit(p_id, p_expected_revision, p_reply), api.inspection_reopen(p_id, p_expected_revision, p_reason) (name proposed)
+- POST /v1/inspections/:id/review {expectedRevision, decision: approve|return, reason}: 403 reviewer_must_differ_from_submitter / review_stage_not_allowed, 409 review_stage_out_of_order / inspection_not_in_review / stale revision, 422 return_reason_required.
+- POST /v1/inspections/:id/resubmit {expectedRevision, reply}: routing per hybrid rule from STORED answers; 422 reply_required_when_unchanged.
+- POST /v1/inspections/:id/reopen {expectedRevision, reason}: separate privilege, only from approved, new revision, 403 reopen_not_permitted, 409 inspection_not_approved.
+- Evidence intent also accepts originalSha256 and originalBytes (original before compression). Schedules: frequency daily|weekly|monthly|yearly, interval 1..52; reason_too_short = 422.

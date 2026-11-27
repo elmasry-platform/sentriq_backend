@@ -7,8 +7,8 @@ export class CreateScheduleDto {
   @IsUUID() templateId!: string;
   @IsUUID() siteId!: string;
   @IsUUID() assigneeMembershipId!: string;
-  @IsIn(['once', 'daily', 'weekly', 'monthly']) frequency!: 'once' | 'daily' | 'weekly' | 'monthly';
-  @Type(() => Number) @IsInt() @Min(1) @Max(12) @IsOptional() interval?: number;
+  @IsIn(['daily', 'weekly', 'monthly', 'yearly']) frequency!: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  @Type(() => Number) @IsInt() @Min(1) @Max(52) @IsOptional() interval?: number;
   @Matches(/^\d{4}-\d{2}-\d{2}$/) startDate!: string;
   @Matches(/^\d{4}-\d{2}-\d{2}$/) @IsOptional() endDate?: string;
   /** IANA zone; due dates are computed in it. */

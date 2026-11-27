@@ -11,6 +11,7 @@ export class SchedulesService {
     if (e instanceof PostgrestError) {
       if (e.message === 'schedule_not_found') return new NotFoundException({ code: 'schedule_not_found' });
       if (e.message === 'template_not_published' || e.message === 'template_retired') return new UnprocessableEntityException({ code: e.message });
+      if (e.message === 'reason_too_short') return new UnprocessableEntityException({ code: e.message });
       if (e.message === 'schedule_already_cancelled') return new ConflictException({ code: e.message });
       if (e.code === '42501' || e.status === 401 || e.status === 403) return new ForbiddenException({ code: 'forbidden' });
     }
