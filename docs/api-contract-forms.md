@@ -50,3 +50,13 @@ Response 200 `{results:[{clientOpId, status: applied|duplicate|rejected, reason?
 
 ### Payload comparison (Reviewer rule)
 Same clientOpId/inspectionId with a payload is compared by SHA-256 of the CANONICAL JSON of the answers (sorted keys, no whitespace, UTF-8), computed in the database (digest(...,'sha256')), never a weak or client-supplied hash. Mismatch = rejected `payload_mismatch` (client equivalent: CLIENT_ID_PAYLOAD_MISMATCH), the stored record is untouched.
+
+## Evidence (M05) - DB pieces pending (DE 062): evidence_create_intent, evidence_confirm, evidence_get_download
+- POST /v1/evidence/intents: per-file checks in API (image 10 MB, pdf 25 MB, no video, jpeg/png/webp/pdf only) then DB (aggregate 100 MB, authz, client-id idempotency). Same clientEvidenceId + same sha256 = same row; different sha256 = 409 payload_mismatch.
+- POST /v1/evidence/:id/confirm {sha256}: marks uploaded; scan_status starts pending/quarantined.
+- GET /v1/evidence/:id/download: 423 evidence_not_available until scan_status=clean; then a 10-minute signed link signed with the user's own token (storage RLS applies). Invisible row: 404; forbidden: 403.
+- Undecided: max files per submission, scanner vendor.
+
+## Schedules and occurrences (M07) - DB pieces pending (DE 064): v_schedules, v_occurrences, schedule_create, schedule_cancel, schedule_reassign
+- POST /v1/schedules (published template only, pinned to the version at creation; timezone = IANA zone, due date computed in it), GET /v1/schedules, POST /v1/schedules/:id/cancel {reason}, POST /v1/schedules/:id/reassign {assigneeMembershipId, reason}, GET /v1/occurrences?tenantId&status.
+- Occurrence uniqueness key schedule_id + occurrence_date (DB), so scheduler retries create no duplicates. Overdue is derived in the DB. Retired template: 422 template_retired for new schedules; existing occurrences stay pinned. Scheduler trigger (Vercel cron vs pg_cron) is undecided (Mohamed).
